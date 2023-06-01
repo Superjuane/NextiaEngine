@@ -76,8 +76,6 @@ public class GraphQueriesJenaImpl implements GraphQueries {
 //        graph.addLiteral(uri+"NombreA1", uri+"is", "labelA1");
         graph.add(getUri(name), RDF.type.getURI(), DataFrame_MM.DataFrame.getURI());
         graph.addLiteral(getUri(name), RDFS.label.getURI(), name);
-        graph.add(getUri("NADA"), RDF.type.getURI(), DataFrame_MM.DataFrame.getURI());
-        graph.addLiteral(getUri("NADA"), RDFS.label.getURI(), "NADA");
         for(int i = 0; i < 2; ++i) {
             String col = "Col-"+i;
             graph.add(getUri(col), RDF.type.getURI(),DataFrame_MM.Data.getURI());
@@ -85,7 +83,7 @@ public class GraphQueriesJenaImpl implements GraphQueries {
             graph.add(getUri(name),DataFrame_MM.hasData.getURI(),getUri(col));
             graph.add(getUri(col),DataFrame_MM.hasDataType.getURI(),DataFrame_MM.String.getURI());
         }
-        HashMap prefixes = new HashMap<>();
+        HashMap<String, String> prefixes = new HashMap<>();
         prefixes.put("DTIM", "www.edu.upc.dtim/");
         prefixes.put("RDF", "http://www.w3.org/1999/02/22-rdf-syntax-ns#");
         prefixes.put("RDFS", "http://www.w3.org/2000/01/rdf-schema#");
@@ -102,28 +100,13 @@ public class GraphQueriesJenaImpl implements GraphQueries {
     public /*QueryResult*/List<Map<String, String>> executeQuery(Query q, Graph g) {
 
         JenaGraph jenaGraph;
-
-        jenaGraph = MockModel();
-        //jenaGraph = adapt(g);
-
-       HashSet<String> atributes = ExtractAtributeNames(q.getQueryText());
-//        ExtractAtributeNames(q.getQueryText());
-
-        //QueryResult queryResult = new QueryResult(q, g);
         List<Map<String, String>> queryResult = new ArrayList<>();
 
-        System.out.println(q.getQueryText());
+        jenaGraph = MockModel();
 
-        jenaGraph.runAQuery(q.getQueryText()).forEachRemaining(res -> {
-//           String s = res.getResource("df").getURI(); System.out.println("----------------------\n"+s);
-//           System.out.println(res.getLiteral("label"));
-//           String l = res.getResource("a2").getURI();System.out.println(l);
-//           if (res.get("a3").isLiteral()){
-//               String m = String.valueOf(res.getLiteral("a3")); System.out.println(m);
-//           }
-//           else {
-//               String m = res.getResource("a3").getURI(); System.out.println(m);
-//           }
+       HashSet<String> atributes = ExtractAtributeNames(q.getQueryText());
+
+       jenaGraph.runAQuery(q.getQueryText()).forEachRemaining(res -> {
             Map<String, String> mapResult = new HashMap<>();
             for(String atribute : atributes){
                 String m;
@@ -136,16 +119,8 @@ public class GraphQueriesJenaImpl implements GraphQueries {
                 mapResult.put(atribute, m);
             }
             queryResult.add(mapResult);
-           System.out.println("----------------------");
-//           QuerySolution qu = new QuerySolution();
-//           qu.set("label", l);
-            //queryResult.addQuerySolution();
-        });
-
-       //! q.setQueryResult(queryResult);
-
-
-        return queryResult;
+       });
+       return queryResult;
     }
 
 

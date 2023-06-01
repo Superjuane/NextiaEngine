@@ -53,6 +53,7 @@ public class Main extends GlobalVocabularyMock {
 
         GraphQueries engine = new GraphQueriesJenaImpl();
         List<Map<String, String>> result;
+
         //* ejecutamos las 6 engine.graphquery.execQuery(g, forEachProdRule)
 
         // Rule 1. Instances of J:Object(dataframe) are translated to instances of rdfs:Class .
@@ -104,7 +105,14 @@ public class Main extends GlobalVocabularyMock {
             G_RDFS.addTriple(new Triple(new URI(res.get("d")), RDFS.range, new URI(res.get("dt"))));
         }
 
+        System.out.println("\n\n\n===============================================================\n\n\n");
         //for the debug breakpoint, to see the graph
-        System.out.println(G_RDFS);
+        for(Triple t : G_RDFS.getTriples()){
+            URI x = null;
+            if(t.getObject().getClass() == URI.class){
+                x = (URI) t.getObject();
+            }
+            System.out.println(t.getSubject().getURI() + " " + t.getPredicate().getURI() + " " + x.getURI());
+        }
     }
 }
