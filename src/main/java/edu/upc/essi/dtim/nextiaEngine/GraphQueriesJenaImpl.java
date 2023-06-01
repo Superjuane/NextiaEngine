@@ -27,6 +27,9 @@ public class GraphQueriesJenaImpl implements GraphQueries {
         Matcher matcher = pattern.matcher(query);
         while (matcher.find()) {
             String substring = matcher.group();
+            if (substring.equalsIgnoreCase("WHERE")) {
+                break; // Stop matching if substring equals "WHERE"
+            }
             result.add(substring.substring(1, substring.length()-1));
         }
         return result;
