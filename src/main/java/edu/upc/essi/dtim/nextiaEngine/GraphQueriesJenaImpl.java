@@ -6,25 +6,11 @@ import edu.upc.essi.dtim.Queries.Query;
 import edu.upc.essi.dtim.Queries.QuerySolution;
 import edu.upc.essi.dtim.nextiaEngine.temp.DataFrame_MM;
 import edu.upc.essi.dtim.nextiaEngine.temp.JenaGraph;
-import org.apache.jena.atlas.lib.tuple.Tuple3;
-import org.apache.jena.base.Sys;
 import org.apache.jena.ext.com.google.common.collect.Maps;
-import org.apache.jena.ext.com.google.common.collect.Sets;
 import org.apache.jena.ontology.OntModel;
-import org.apache.jena.query.*;
 import org.apache.jena.rdf.model.*;
 import org.apache.jena.rdf.model.impl.*;
-import org.apache.jena.reasoner.Reasoner;
-import org.apache.jena.reasoner.ReasonerRegistry;
-import org.apache.jena.sparql.algebra.Algebra;
-import org.apache.jena.sparql.algebra.Op;
-import org.apache.jena.sparql.algebra.op.OpBGP;
-import org.apache.jena.sparql.algebra.op.OpJoin;
-import org.apache.jena.sparql.algebra.op.OpProject;
-import org.apache.jena.sparql.algebra.op.OpTable;
 import org.apache.jena.sparql.core.BasicPattern;
-import org.apache.jena.sparql.core.Var;
-import org.apache.jena.sys.JenaSystem;
 
 import java.util.*;
 import java.util.regex.Matcher;
@@ -41,7 +27,7 @@ public class GraphQueriesJenaImpl implements GraphQueries {
         Matcher matcher = pattern.matcher(query);
         while (matcher.find()) {
             String substring = matcher.group();
-            result.add(substring);
+            result.add(substring.substring(1, substring.length()-1));
         }
         return result;
     }
@@ -87,6 +73,8 @@ public class GraphQueriesJenaImpl implements GraphQueries {
 //        graph.addLiteral(uri+"NombreA1", uri+"is", "labelA1");
         graph.add(getUri(name), RDF.type.getURI(), DataFrame_MM.DataFrame.getURI());
         graph.addLiteral(getUri(name), RDFS.label.getURI(), name);
+        graph.add(getUri("NADA"), RDF.type.getURI(), DataFrame_MM.DataFrame.getURI());
+        graph.addLiteral(getUri("NADA"), RDFS.label.getURI(), "NADA");
         for(int i = 0; i < 2; ++i) {
             String col = "Col-"+i;
             graph.add(getUri(col), RDF.type.getURI(),DataFrame_MM.Data.getURI());
@@ -108,7 +96,7 @@ public class GraphQueriesJenaImpl implements GraphQueries {
 
 
     @Override
-    public QueryResult executeQuery(Query q, Graph g) {
+    public /*QueryResult*/List<Map<String, String>> executeQuery(Query q, Graph g) {
 
         JenaGraph jenaGraph;
 
@@ -118,14 +106,14 @@ public class GraphQueriesJenaImpl implements GraphQueries {
        HashSet<String> atributes = ExtractAtributeNames(q.getQueryText());
 //        ExtractAtributeNames(q.getQueryText());
 
-        QueryResult queryResult = new QueryResult(q, g);
-
+        //QueryResult queryResult = new QueryResult(q, g);
+        List<Map<String, String>> queryResult = new ArrayList<>();
 
         System.out.println(q.getQueryText());
-        System.out.println(jenaGraph.runAQuery(q.getQueryText()));
+
         jenaGraph.runAQuery(q.getQueryText()).forEachRemaining(res -> {
-           String s = res.getResource("df").getURI(); System.out.println("----------------------\n"+s);
-           System.out.println(res.getLiteral("label"));
+//           String s = res.getResource("df").getURI(); System.out.println("----------------------\n"+s);
+//           System.out.println(res.getLiteral("label"));
 //           String l = res.getResource("a2").getURI();System.out.println(l);
 //           if (res.get("a3").isLiteral()){
 //               String m = String.valueOf(res.getLiteral("a3")); System.out.println(m);
@@ -133,9 +121,20 @@ public class GraphQueriesJenaImpl implements GraphQueries {
 //           else {
 //               String m = res.getResource("a3").getURI(); System.out.println(m);
 //           }
+            Map<String, String> mapResult = new HashMap<>();
+            for(String atribute : atributes){
+                String m;
+                if (res.get(atribute).isLiteral()){
+                    m = String.valueOf(res.getLiteral(atribute)); System.out.println("   -literal: "+ m);
+                }
+                else {
+                    m = res.getResource(atribute).getURI(); System.out.println("   -literal: "+m);
+                }
+                mapResult.put(atribute, m);
+            }
+            queryResult.add(mapResult);
            System.out.println("----------------------");
-           QuerySolution qu = new QuerySolution();
-           qu.set("df", s);
+//           QuerySolution qu = new QuerySolution();
 //           qu.set("label", l);
             //queryResult.addQuerySolution();
         });

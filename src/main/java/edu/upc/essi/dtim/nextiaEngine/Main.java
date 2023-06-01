@@ -15,6 +15,8 @@ import static edu.upc.essi.dtim.vocabulary.Nextia.IntegratedDatatypeProperty;
 
 import java.io.FileOutputStream;
 import java.util.HashSet;
+import java.util.List;
+import java.util.Map;
 import java.util.Set;
 
 
@@ -53,7 +55,7 @@ public class Main extends GlobalVocabularyMock {
 
 
         GraphQueries engine = new GraphQueriesJenaImpl();
-        QueryResult result;
+        List<Map<String, String>> result;
         //* ejecutamos las 6 engine.graphquery.execQuery(g, forEachProdRule)
 
                 // Rule 1. Instances of J:Object(dataframe) are translated to instances of rdfs:Class .
@@ -67,15 +69,25 @@ public class Main extends GlobalVocabularyMock {
 
         result = engine.executeQuery(q1, G_DataFrame);
 
-        //* para cada result le agregamos una tripleta al grafo G_RDFS
-        while(result.iterator().hasNext()){
-            QuerySolution solution = result.iterator().next();
-            //G_target.add(res.getResource("df").getURI(), org.apache.jena.vocabulary.RDF.type, org.apache.jena.vocabulary.RDFS.Class);
-            G_RDFS.addTriple(new Triple(new URI(solution.get("df")), RDF.type, RDFS.Class));
-
-            //G_target.addLiteral(res.getResource("df").getURI(), org.apache.jena.vocabulary.RDFS.label, res.getLiteral("label") );
-            //! UNA URI COMO LITERAL?
-            G_RDFS.addTriple(new Triple(new URI(solution.get("df")), RDFS.label, new URI(solution.get("label"))));
+        System.out.println("Resultat de la query 1:");
+        for(Map<String, String> res : result){
+            System.out.println(res);
         }
+
+        //* para cada result le agregamos una tripleta al grafo G_RDFS
+//        while(result.iterator().hasNext()){
+//            QuerySolution solution = result.iterator().next();
+//            //G_target.add(res.getResource("df").getURI(), org.apache.jena.vocabulary.RDF.type, org.apache.jena.vocabulary.RDFS.Class);
+//            G_RDFS.addTriple(new Triple(new URI(solution.get("df")), RDF.type, RDFS.Class));
+//
+//            //G_target.addLiteral(res.getResource("df").getURI(), org.apache.jena.vocabulary.RDFS.label, res.getLiteral("label") );
+//            //! UNA URI COMO LITERAL?
+//            G_RDFS.addTriple(new Triple(new URI(solution.get("df")), RDFS.label, new URI(solution.get("label"))));
+//        }
+        for(Map<String, String> res : result){
+            G_RDFS.addTriple(new Triple(new URI(res.get("df")), RDF.type, RDFS.Class));
+            G_RDFS.addTriple(new Triple(new URI(res.get("df")), RDFS.label, new URI(res.get("label"))));
+        }
+        System.out.println(G_RDFS);
     }
 }
