@@ -11,10 +11,7 @@ import org.apache.jena.riot.RDFDataMgr;
 import static edu.upc.essi.dtim.vocabulary.Nextia.IntegratedDatatypeProperty;
 
 import java.io.FileOutputStream;
-import java.util.HashSet;
-import java.util.List;
-import java.util.Map;
-import java.util.Set;
+import java.util.*;
 
 
 class GlobalVocabularyMock{
@@ -31,24 +28,24 @@ public class Main extends GlobalVocabularyMock {
         Graph G_DataFrame = new LocalGraph(new URI(getUri(name)),new HashSet<Triple>());
         Graph G_RDFS = new LocalGraph(new URI(getUri(name)),new HashSet<Triple>());
 
-//        //* agregamos tripletes en d para el ejemplo
-//            //G_target.add(createIRI(name), RDF.type, DataFrame_MM.DataFrame);
-//        G_DataFrame.addTriple(new Triple(new URI(getUri(name)), RDF.type, DataFrame_MM.DataFrame));
-//            //G_target.addLiteral(createIRI(name), RDFS.label, name);
-//        G_DataFrame.addTriple(new Triple(new URI(getUri(name)), RDFS.label, new URI(name)));
-//        //!OJO: al label no hauria d'anar una URL, hauria d'anar un Literal o similar?
-//
-//        for(int i = 0; i < 1; ++i) {
-//            String col = "Col-"+i;
-//            //G_target.add(createIRI(h2), org.apache.jena.vocabulary.RDF.type,DataFrame_MM.Data);
-//            G_DataFrame.addTriple(new Triple(new URI(getUri(col)), RDF.type, DataFrame_MM.Data));
-//            //G_target.addLiteral(createIRI(h2), org.apache.jena.vocabulary.RDFS.label,h2 );
-//            G_DataFrame.addTriple(new Triple(new URI(getUri(col)), RDFS.label,new URI(getUri(col))));
-//            //G_target.add(createIRI(name),DataFrame_MM.hasData,createIRI(h2));
-//            G_DataFrame.addTriple(new Triple(new URI(getUri(name)), DataFrame_MM.hasData, new URI(getUri(col))));
-//            //G_target.add(createIRI(h2),DataFrame_MM.hasDataType,DataFrame_MM.String);
-//            G_DataFrame.addTriple(new Triple(new URI(getUri(col)), DataFrame_MM.hasDataType,DataFrame_MM.String));
-//        }
+        //* agregamos tripletes en d para el ejemplo
+            //G_target.add(createIRI(name), RDF.type, DataFrame_MM.DataFrame);
+        G_DataFrame.addTriple(new Triple(new URI(getUri(name)), RDF.type, DataFrame_MM.DataFrame));
+            //G_target.addLiteral(createIRI(name), RDFS.label, name);
+        G_DataFrame.addTriple(new Triple(new URI(getUri(name)), RDFS.label, new URI(name)));
+        //!OJO: al label no hauria d'anar una URL, hauria d'anar un Literal o similar?
+
+        for(int i = 0; i < 1; ++i) {
+            String col = "Col-"+i;
+            //G_target.add(createIRI(h2), org.apache.jena.vocabulary.RDF.type,DataFrame_MM.Data);
+            G_DataFrame.addTriple(new Triple(new URI(getUri(col)), RDF.type, DataFrame_MM.Data));
+            //G_target.addLiteral(createIRI(h2), org.apache.jena.vocabulary.RDFS.label,h2 );
+            G_DataFrame.addTriple(new Triple(new URI(getUri(col)), RDFS.label,new URI(col)));
+            //G_target.add(createIRI(name),DataFrame_MM.hasData,createIRI(h2));
+            G_DataFrame.addTriple(new Triple(new URI(getUri(name)), DataFrame_MM.hasData, new URI(col)));
+            //G_target.add(createIRI(h2),DataFrame_MM.hasDataType,DataFrame_MM.String);
+            G_DataFrame.addTriple(new Triple(new URI(getUri(col)), DataFrame_MM.hasDataType,DataFrame_MM.String));
+        }
 
 
         GraphQueries engine = new GraphQueriesJenaImpl();
@@ -69,7 +66,6 @@ public class Main extends GlobalVocabularyMock {
         Query q2 = new Query("2", "SELECT ?df ?d ?label WHERE { ?df <"+ DataFrame_MM.hasData.getURI()+"> ?d. ?d <"+ RDFS.label.getURI()+"> ?label }");
         result = engine.executeQuery(q2, G_DataFrame);
         for(Map<String, String> res : result) {
-            //System.out.println(res);
             G_RDFS.addTriple(new Triple(new URI(res.get("d")), RDF.type, RDF.Property));
             G_RDFS.addTriple(new Triple(new URI(res.get("d")), RDFS.label, new URI(res.get("label"))));
             G_RDFS.addTriple(new Triple(new URI(res.get("d")), RDFS.domain, new URI(res.get("df"))));
@@ -106,13 +102,36 @@ public class Main extends GlobalVocabularyMock {
         }
 
         System.out.println("\n\n\n===============================================================\n\n\n");
-        //for the debug breakpoint, to see the graph
+
+        GraphQueriesJenaImpl engine2 = new GraphQueriesJenaImpl();
+        System.out.println("\n ------- Adapted Jena Graph -------\n");
+        engine2.adapt(G_DataFrame).write(System.out, "TURTLE");
+
+
+        System.out.println("\n\n\n ------- Translated Odin Graph -------\n");
+
         for(Triple t : G_RDFS.getTriples()){
             URI x = null;
             if(t.getObject().getClass() == URI.class){
                 x = (URI) t.getObject();
             }
-            System.out.println(t.getSubject().getURI() + " " + t.getPredicate().getURI() + " " + x.getURI());
+            System.out.println(prefixed(t.getSubject().getURI()) + "\n      " + prefixed(t.getPredicate().getURI()) + "\n      " + prefixed(x.getURI()));
         }
+    }
+
+    private static String prefixed(String inputURI) {
+        Map<String, String> prefixes = new HashMap<>();
+        prefixes.put("www.edu.upc.dtim/", "DTIM:");
+        prefixes.put("http://www.w3.org/1999/02/22-rdf-syntax-ns#", "RDF:");
+        prefixes.put("http://www.w3.org/2000/01/rdf-schema#", "RDFS:");
+        prefixes.put("https://www.essi.upc.edu/dtim/dataframe-metamodel#", "METAMODEL:");
+        prefixes.put("http://www.w3.org/2001/XMLSchema#", "XSD:");
+        String outputURI = inputURI;
+        for (Map.Entry<String, String> entry : prefixes.entrySet()) {
+            String key = entry.getKey();
+            String value = entry.getValue();
+            outputURI = inputURI.replace(key, value);
+        }
+        return outputURI;
     }
 }

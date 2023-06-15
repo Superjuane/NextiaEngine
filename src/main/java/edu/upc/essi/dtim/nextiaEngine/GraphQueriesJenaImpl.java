@@ -6,10 +6,18 @@ import edu.upc.essi.dtim.Queries.Query;
 import edu.upc.essi.dtim.Queries.QuerySolution;
 import edu.upc.essi.dtim.nextiaEngine.temp.DataFrame_MM;
 import edu.upc.essi.dtim.nextiaEngine.temp.JenaGraph;
+import org.apache.jena.Jena;
 import org.apache.jena.ext.com.google.common.collect.Maps;
+import org.apache.jena.ext.com.google.common.collect.Sets;
 import org.apache.jena.ontology.OntModel;
+import org.apache.jena.query.QueryFactory;
 import org.apache.jena.rdf.model.*;
 import org.apache.jena.rdf.model.impl.*;
+import org.apache.jena.reasoner.Reasoner;
+import org.apache.jena.reasoner.ReasonerRegistry;
+import org.apache.jena.sparql.algebra.Algebra;
+import org.apache.jena.sparql.algebra.Op;
+import org.apache.jena.sparql.algebra.op.*;
 import org.apache.jena.sparql.core.BasicPattern;
 
 import java.util.*;
@@ -18,6 +26,7 @@ import java.util.regex.Pattern;
 
 import edu.upc.essi.dtim.nextiaEngine.temp.RDF;
 import edu.upc.essi.dtim.nextiaEngine.temp.RDFS;
+import org.apache.jena.sparql.core.Var;
 
 public class GraphQueriesJenaImpl implements GraphQueries {
 
@@ -49,7 +58,7 @@ public class GraphQueriesJenaImpl implements GraphQueries {
     private void addTriple(Model model, String s, String p, String o) {
         model.add(new ResourceImpl(s), new PropertyImpl(p), new ResourceImpl(o));
     }
-//    private void ExtractAtributeNames(String SPARQL) {
+//    private void ExtractAtributeNamesNOP(String SPARQL) {
 //        // Compile the SPARQL using ARQ and generate its <pi,phi> representation
 //        org.apache.jena.query.Query q = QueryFactory.create(SPARQL);
 //        Op ARQ = Algebra.compile(q);
@@ -69,6 +78,7 @@ public class GraphQueriesJenaImpl implements GraphQueries {
 //        InfModel PHI_o = ModelFactory.createInfModel(reasoner,PHI_o_ontmodel);
 ////        return new Tuple3<>(PI,PHI_p,PHI_o);
 //    }
+
     private JenaGraph MockModel() {
         JenaGraph graph = new JenaGraph();
         String name = "MockName";
@@ -102,9 +112,11 @@ public class GraphQueriesJenaImpl implements GraphQueries {
         JenaGraph jenaGraph;
         List<Map<String, String>> queryResult = new ArrayList<>();
 
-        jenaGraph = MockModel();
+        //jenaGraph = MockModel();
+        jenaGraph = adapt(g);
 
        HashSet<String> atributes = ExtractAtributeNames(q.getQueryText());
+//       ExtractAtributeNamesNOP(q.getQueryText());
 
        jenaGraph.runAQuery(q.getQueryText()).forEachRemaining(res -> {
             Map<String, String> mapResult = new HashMap<>();
@@ -114,7 +126,7 @@ public class GraphQueriesJenaImpl implements GraphQueries {
                     m = String.valueOf(res.getLiteral(atribute)); System.out.println("   -literal: "+ m);
                 }
                 else {
-                    m = res.getResource(atribute).getURI(); System.out.println("   -literal: "+m);
+                    m = res.getResource(atribute).getURI(); System.out.println("   -resource: "+m);
                 }
                 mapResult.put(atribute, m);
             }
@@ -123,25 +135,72 @@ public class GraphQueriesJenaImpl implements GraphQueries {
        return queryResult;
     }
 
-
-    public JenaGraph adaptGraph (Graph graph){
+    public JenaGraph adapt (Graph graph){
         JenaGraph result = new JenaGraph();
+//        System.out.println("********* Adapting graph *********");
         for (Triple triple : graph.getTriples()){
-//            result.add(triple.getSubject().getURI(), triple.getPredicate().getURI(), triple.getObject());
+            URI x = null;
+            if(triple.getObject().getClass() == URI.class){
+                x = (URI) triple.getObject();
+            }
+//            System.out.println("  · "+prefixed(triple.getSubject().getURI()) + "\n        " + prefixed(triple.getPredicate().getURI()) + "\n        " + prefixed(x.getURI()));
+            if(isLiteral(x.getURI())){
+//                System.out.println("        isLiteral");
+                result.addLiteral(triple.getSubject().getURI(), triple.getPredicate().getURI(), x.getURI());
+            }
+            else {
+//                System.out.println("        isResource");
+                result.add(triple.getSubject().getURI(), triple.getPredicate().getURI(), x.getURI());
+            }
         }
-        return result;
-    }
-    public Model adapt2 (Graph graph){
-        Model result = ModelFactory.createDefaultModel();
-        for (Triple triple : graph.getTriples()){
-            System.out.println(triple.getSubject().getURI());
-            Resource subject = result.createResource(triple.getSubject().getURI());
-            subject.addProperty(result.createProperty(triple.getPredicate().getURI()), result.createResource(triple.getObject().toString()));
-        }
+//        System.out.println("**********************************");
+//        System.out.println("********* Adapted Model JENA GRAPH *********");
+//        result.write(System.out, "TLT");
+//        System.out.println("**********************************");
+
         return result;
     }
 
-    public Model adapt(Graph graph) {
+    private boolean isLiteral(String uri) {
+        return !(uri.startsWith("http://") || uri.startsWith("www.") || uri.startsWith("https://"));
+    }
+
+    private String prefixed(String inputURI) {
+        Map<String, String> prefixes = new HashMap<>();
+        prefixes.put("www.edu.upc.dtim/", "DTIM:");
+        prefixes.put("http://www.w3.org/1999/02/22-rdf-syntax-ns#", "RDF:");
+        prefixes.put("http://www.w3.org/2000/01/rdf-schema#", "RDFS:");
+        prefixes.put("https://www.essi.upc.edu/dtim/dataframe-metamodel#", "METAMODEL:");
+        prefixes.put("http://www.w3.org/2001/XMLSchema#", "XSD:");
+        String outputURI = inputURI;
+        for (Map.Entry<String, String> entry : prefixes.entrySet()) {
+            String key = entry.getKey();
+            String value = entry.getValue();
+            outputURI = inputURI.replace(key, value);
+        }
+        return outputURI;
+    }
+
+//    public JenaGraph adaptGraph (Graph graph){
+//        JenaGraph result = new JenaGraph();
+//        for (Triple triple : graph.getTriples()){
+//            result.add(triple.getSubject().getURI(), triple.getPredicate().getURI(), triple.getObject().toString());
+//        }
+//        return result;
+//    }
+//    public Model adapt2 (Graph graph){
+//        Model result = ModelFactory.createDefaultModel();
+//        for (Triple triple : graph.getTriples()){
+//            System.out.println(triple.getSubject().getURI());
+//            Resource subject = result.createResource(triple.getSubject().getURI());
+//            subject.addProperty(result.createProperty(triple.getPredicate().getURI()), result.createResource(triple.getObject().toString()));
+//        }
+//        return result;
+//    }
+
+
+
+    public Model adaptNO(Graph graph) {
         Model model = ModelFactory.createDefaultModel();
         for (Triple triple : graph.getTriples()) {
             Resource subject = ResourceFactory.createResource(triple.getSubject().getURI());
@@ -161,9 +220,5 @@ public class GraphQueriesJenaImpl implements GraphQueries {
         }
         return model;
     }
-//    @Override
-//    public void executeQuery(String q, Graph g) {
-//
-//
-//    }
+
 }
