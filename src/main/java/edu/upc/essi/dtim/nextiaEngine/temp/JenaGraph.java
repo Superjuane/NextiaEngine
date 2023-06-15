@@ -131,7 +131,6 @@ public class JenaGraph {
 
         try (QueryExecution qExec = QueryExecutionFactory.create(QueryFactory.create(query), model)) {
             ResultSetRewindable results = ResultSetFactory.copyResults(qExec.execSelect());
-            System.out.println("     - number of results: " + results.size());
             qExec.close();
             return results;
         } catch (Exception e) {
